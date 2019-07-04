@@ -1,67 +1,38 @@
-import requests, config, time
+from app import app
+from app.models import Card
+import config, requests
 
-headers = {'Authorization' : config.BEARER_TOKEN}
+def getAllCardIds():
 
-def getProductInfo(productName):
+    cards = Card.query.all()
 
-    list_of_cards = []
-    session = requests.Session()
-    session.headers.update(headers)
-    products_per_set = getProducts(productName, session)
-    normal_emoji = u'\U0001F516'
-    foil_emoji = u'\U0001F308'
+    cardIds = []
+    for card in cards:
 
-    for product in products_per_set:    
+        cardIds.append(card.id)
 
-        set_name = _getProductGroup(product['groupId'], session)
-        card_prices = _getProductPrice(product['productId'], session)
-        card = {
-            'product_name' : product['name'],
-            'set_name' : set_name,
-            'image_url' : product['imageUrl'],
-            'url' : product['url'],
-            'normal_market_price' : "{}: ${}".format(normal_emoji, card_prices['normal_price']),
-            'foil_market_price' : "{}: ${}".format(foil_emoji, card_prices['foil_price'])
-        }
+    chunks_of_cardIds = [cardIds[x:x+100] for x in range(0, len(cardIds), 100)]
 
-        list_of_cards.append(card)
+    return chunks_of_cardIds
+
+def getAllPricesByChunk(chunks_of_cardIds, session):
+
+    list_of_prices = []
+    for chunk in chunks_of_cardIds:
+
+        cardIds = ','.join(map(str, chunk))
+        response = session.get("http://api.tcgplayer.com/{}/pricing/product/{}".format(config.TCGPlayer_version, cardIds))
+        prices = response.json()['results']
+
+        list_of_prices.append(prices)
+        continue
     
-    return list_of_cards
+    return list_of_prices
 
-def getProducts(name, session):
+session = requests.Session()
+session.headers.update(config.BEARER_TOKEN)
 
-    data = {'categoryId' : 1, 'productTypes' : 'Cards', 'productName' : name}
-    response = session.get("http://api.tcgplayer.com/v1.17.0/catalog/products", params=data)
-    products = response.json()['results']
-    
-    return products
+x = getAllCardIds()
 
-def _getProductPrice(productId, session):
-
-    response = session.get("https://api.tcgplayer.com/v1.17.0/pricing/product/{0}".format(productId))
-    card_prices = response.json()['results']
-    card_price = {}
-
-    for price in card_prices:
-
-        if price['subTypeName'] == "Foil":
-            card_price['foil_price'] = price['midPrice']
-        else:
-            card_price['normal_price'] = price['midPrice']
-
-    return card_price
-
-
-def _getProductGroup(groupId, session):
-    
-    response = session.get("http://api.tcgplayer.com/v1.17.0/catalog/groups/{0}".format(groupId))
-    [set_name] = response.json()['results']
-
-    return set_name['name']
-    
-
-# card_name = input("Card name: ")
-# start = time.time()
-# print(getProductInfo(card_name))
-# end = time.time()
-# print(end-start)
+y = getAllPricesByChunk(x, session)
+print(y)
