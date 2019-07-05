@@ -52,8 +52,8 @@ class Price(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     card_id = db.Column(db.Integer)
-    normal_price = db.Column(db.Float)
-    foil_price = db.Column(db.Float)
+    price = db.Column(db.Float)
+    card_type = db.Column(db.VARCHAR(15))
 
     def __repr__(self):
 
