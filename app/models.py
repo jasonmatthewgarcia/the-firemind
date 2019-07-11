@@ -1,11 +1,45 @@
-from app import db, login
+from app import db, login, session_factory
+from sqlalchemy.orm import scoped_session
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
+from contextlib import contextmanager
+
+from sqlalchemy.sql import text
 
 @login.user_loader
 def load_user(id):
     
     return Admin.query.get(int(id))
+
+def bulk_insert_data(table, list_of_data):
+
+    Session = scoped_session(session_factory)    
+    Session.bulk_insert_mappings(table, list_of_data)
+    Session.commit()
+    Session.remove()
+
+def fetch_card(name):
+
+    Session = scoped_session(session_factory)
+    sql = '''
+    SELECT 
+       c.name as card_name,
+       c.imageUrl as image_url,
+       c.url as url,
+       s.name as set_name,
+       p.midPrice as price,
+       p.subTypeName as type
+    FROM card c
+       JOIN
+       card_set s ON c.groupId = s.groupId
+       JOIN
+       price p ON c.productId = p.productId
+    WHERE (c.cleanName = :param OR 
+        c.name = :param) AND 
+       s.isSupplemental = 0
+       '''
+    
+    return Session.query(Card, CardSet, Price).from_statement(text(sql)).params(param=name).all()
 
 class Admin(UserMixin, db.Model):
 
@@ -20,7 +54,6 @@ class Admin(UserMixin, db.Model):
     def check_password(self, password):
 
         return check_password_hash(self.password_hash, password)
-        
 
     def __repr__(self):
 
@@ -28,33 +61,43 @@ class Admin(UserMixin, db.Model):
 
 class Card(db.Model):
 
-    id = db.Column(db.Integer, primary_key=True)
-    set_id = db.Column(db.Integer)
-    name = db.Column(db.VARCHAR(50))
-    clean_name = db.Column(db.VARCHAR(50))
-    image_url = db.Column(db.VARCHAR(100))
-    url = db.Column(db.VARCHAR(100))
+    productId = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.Text(50))
+    cleanName = db.Column(db.Text(50))
+    imageUrl = db.Column(db.Text(100))
+    groupId = db.Column(db.Integer)
+    url = db.Column(db.Text(100))
 
     def __repr__(self):
+        
+        return '<id {}, name {}>'.format(self.productId, self.name)
 
-        return '<id {}, name {}>'.format(self.id, self.name)
+    def getAllCardIdsFromDatabase(self, chunkSize=100):
+
+        cards = self.query.all()
+        cardIds = [card.productId for card in cards]
+
+        chunks_of_cardIds = [cardIds[x:x+chunkSize] for x in range(0, len(cardIds), chunkSize)]
+
+        return chunks_of_cardIds
 
 class CardSet(db.Model):
 
-    id = db.Column(db.Integer, primary_key=True)
+    groupId = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.VARCHAR(50))
+    isSupplemental = db.Column(db.Boolean)
 
     def __repr__(self):
 
-        return '<id {}, name {}>'.format(self.id, self.name)
+        return '<id {}, name {}>'.format(self.groupId, self.name)
 
 class Price(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
-    card_id = db.Column(db.Integer)
-    price = db.Column(db.Float)
-    card_type = db.Column(db.VARCHAR(15))
+    productId = db.Column(db.Integer)
+    midPrice = db.Column(db.Float)
+    subTypeName = db.Column(db.VARCHAR(15))
 
     def __repr__(self):
 
-        return '<id {}, normal_price {}>'.format(self.id, self.normal_price)
+        return '<id {}, normal_price {}>'.format(self.productId, self.marketPrice)
