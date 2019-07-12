@@ -49,18 +49,3 @@ def init_session():
     session.headers.update(config.BEARER_TOKEN)
 
     return session
-
-
-# session = requests.Session()
-# session.headers.update(config.BEARER_TOKEN)
-
-# request_for_cards = "http://api.tcgplayer.com/{}/catalog/products".format(config.TCGPlayer_version)
-# request_for_sets = "http://api.tcgplayer.com/{}/catalog/groups".format(config.TCGPlayer_version)
-# TCGPlayer_results_limit = 100
-
-# default_params = {'categoryId' : 1, 'productTypes' : 'Cards', 'limit' : TCGPlayer_results_limit}
-
-# # cards = getBulkCardData(session, request_for_cards, default_params, 43000)
-# sets = getBulkCardData(session, request_for_sets, default_params, 0)
-
-# prices = getAllPricesByChunk(_getAllCardIds(100), session)

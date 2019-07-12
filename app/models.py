@@ -1,10 +1,9 @@
 from app import db, login, session_factory
+from app.dataProcessor import splitListOfDataIntoChunks
 from sqlalchemy.orm import scoped_session
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
-from contextlib import contextmanager
 
-from sqlalchemy.sql import text
 
 @login.user_loader
 def load_user(id):
@@ -21,25 +20,11 @@ def bulk_insert_data(table, list_of_data):
 def fetch_card(name):
 
     Session = scoped_session(session_factory)
-    sql = '''
-    SELECT 
-       c.name as card_name,
-       c.imageUrl as image_url,
-       c.url as url,
-       s.name as set_name,
-       p.midPrice as price,
-       p.subTypeName as type
-    FROM card c
-       JOIN
-       card_set s ON c.groupId = s.groupId
-       JOIN
-       price p ON c.productId = p.productId
-    WHERE (c.cleanName = :param OR 
-        c.name = :param) AND 
-       s.isSupplemental = 0
-       '''
-    
-    return Session.query(Card, CardSet, Price).from_statement(text(sql)).params(param=name).all()
+    results = Session.query(Card).filter(Card.cleanName == name).all()
+
+
+
+    return "TEST"
 
 class Admin(UserMixin, db.Model):
 
@@ -60,13 +45,16 @@ class Admin(UserMixin, db.Model):
         return '<User {}>'.format(self.username)
 
 class Card(db.Model):
-
+    __tablename__ = 'card'
     productId = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Text(50))
     cleanName = db.Column(db.Text(50))
     imageUrl = db.Column(db.Text(100))
-    groupId = db.Column(db.Integer)
+    groupId = db.Column(db.Integer, db.ForeignKey('card_set.groupId'))
     url = db.Column(db.Text(100))
+
+    card_set = db.relationship('CardSet', backref='card' ,uselist=False)
+    prices = db.relationship('Price', backref='card', lazy='joined')
 
     def __repr__(self):
         
@@ -77,12 +65,12 @@ class Card(db.Model):
         cards = self.query.all()
         cardIds = [card.productId for card in cards]
 
-        chunks_of_cardIds = [cardIds[x:x+chunkSize] for x in range(0, len(cardIds), chunkSize)]
+        chunks_of_cardIds = splitListOfDataIntoChunks(cardIds)
 
         return chunks_of_cardIds
 
 class CardSet(db.Model):
-
+    __tablename__ = 'card_set'
     groupId = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.VARCHAR(50))
     isSupplemental = db.Column(db.Boolean)
@@ -92,12 +80,12 @@ class CardSet(db.Model):
         return '<id {}, name {}>'.format(self.groupId, self.name)
 
 class Price(db.Model):
-
+    __tablename__ = 'price'
     id = db.Column(db.Integer, primary_key=True)
-    productId = db.Column(db.Integer)
+    productId = db.Column(db.Integer, db.ForeignKey('card.productId'))
     midPrice = db.Column(db.Float)
     subTypeName = db.Column(db.VARCHAR(15))
 
     def __repr__(self):
 
-        return '<id {}, normal_price {}>'.format(self.productId, self.marketPrice)
+        return '<id {}, normal_price {}>'.format(self.productId, self.midPrice)
