@@ -6,10 +6,26 @@ def splitListOfDataIntoChunks(list_of_data, chunk_size=100):
     
     return chunks_of_data
 
-def formatFetchedCardData(list_of_card_data):
+def formatFetchedCardData(results):
 
-    cards = {}
+    cards = []
+    
+    for card in results:
 
-    for card in list_of_card_data:
+        card_data = {}
 
-        card_data
+        card_data['name'] = card.name
+        card_data['image_url'] = card.imageUrl
+        card_data['url'] = card.url
+        card_data['set_name'] = card.card_set.name
+        
+        for price in card.prices:
+            
+            if price.subTypeName == 'Foil':
+                card_data['foil_price'] = price.midPrice
+            else:
+                card_data['normal_price'] = price.midPrice
+        
+        cards.append(card_data)
+
+    return cards

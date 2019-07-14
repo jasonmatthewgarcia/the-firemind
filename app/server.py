@@ -3,33 +3,29 @@ from app.models import fetch_card
 import config
 import requests
 
-def get_bot_response(message):
-    """This is just a dummy function, returning a variation of what
-    the user said. Replace this function with one connected to chatbot."""
-    # return "Card info in json {}".format(getProductInfo(message))
-    return "Card = {}".format(message), 200
-    # return "Dummy response {}".format(message)
+def _get_card_not_found_response(message):
+    
+    return "Sorry, but I can't find {}. Please try again.".format(message)
 
-def generate_elements(message):
+def _generate_elements(list_of_card_data):
     
     elements = []
-    list_of_cards = fetch_card(message)
 
-    for card in list_of_cards:
+    for card in list_of_card_data:
 
         element = {
-            "title": "{} - {}".format(card['name'], card['set_name']),
-            "image_url": card['image_url'],
-            "subtitle": "{}".format(card['price']),
+            "title": "{} - {}".format(card.get('name'), card.get('set_name')),
+            "image_url": card.get('image_url'),
+            "subtitle": "Normal: {}\nFoil: {}".format(card.get('normal_price'), card.get('foil_price')),
             "default_action": {
                 "type": "web_url",
-                "url": card['image_url'],
+                "url": card.get('image_url'),
                 "webview_height_ratio": "full",
             },
             "buttons": [
                 {
                     "type": "web_url",
-                    "url": card['url'],
+                    "url": card.get('url'),
                     "title": "Get it @TCGPlayer",
                 }
             ]
@@ -39,18 +35,10 @@ def generate_elements(message):
 
     return elements
 
-def send_message(recipient_id, text):
+def _send_message(recipient_id, message_payload):
     """Send a response to Facebook"""
     payload = {
-        'message': {
-            "attachment": {
-                "type": "template",
-                "payload": {
-                    "template_type": "generic",
-                    "elements": generate_elements(text)
-                }
-            }
-        },
+        'message': message_payload,
         'recipient': {
             'id': recipient_id
         },
@@ -67,6 +55,26 @@ def send_message(recipient_id, text):
 
     return response.json(), 200
 
+def _get_card_if_it_exists(message):
+
+    return fetch_card(message)
+
+def _get_error_message_template(message):
+
+    return {'text' : _get_card_not_found_response(message)}
+
+def _get_message_template(card_data):
+
+    return {
+        'attachment': {
+            'type': 'template',
+            'payload': {
+                'template_type': 'generic',
+                'elements': _generate_elements(card_data)
+            }
+        }
+    }
+
 def verify_webhook(req):
     if req.args.get("hub.verify_token") == config.VERIFY_TOKEN:
         print("Validated")
@@ -75,8 +83,14 @@ def verify_webhook(req):
         return 'Incorrect', 400
 
 def respond(sender, message):
-    # response = get_bot_response(message)
-    send_message(sender, message)
+    card_data = _get_card_if_it_exists(message)
+    
+    if card_data:
+        message_payload = _get_message_template(card_data)
+    else:
+        message_payload = _get_error_message_template(message)
+
+    _send_message(sender, message_payload)
 
 def is_user_message(message):
 

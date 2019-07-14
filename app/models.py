@@ -1,5 +1,5 @@
 from app import db, login, session_factory
-from app.dataProcessor import splitListOfDataIntoChunks
+from app.dataProcessor import splitListOfDataIntoChunks, formatFetchedCardData
 from sqlalchemy.orm import scoped_session
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
@@ -17,14 +17,22 @@ def bulk_insert_data(table, list_of_data):
     Session.commit()
     Session.remove()
 
+def bulk_update_data(table, list_of_data):
+
+    Session = scoped_session(session_factory)    
+    Session.bulk_update_mappings(table, list_of_data)
+    Session.commit()
+    Session.remove()
+
 def fetch_card(name):
 
     Session = scoped_session(session_factory)
-    results = Session.query(Card).filter(Card.cleanName == name).all()
+    results = Session.query(Card).filter((Card.cleanName == name) | (Card.name == name)).limit(10).all()
 
+    list_of_card_data = formatFetchedCardData(results)
+    Session.remove()
 
-
-    return "TEST"
+    return list_of_card_data
 
 class Admin(UserMixin, db.Model):
 
