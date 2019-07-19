@@ -17,10 +17,11 @@ def bulk_insert_data(table, list_of_data):
     Session.commit()
     Session.remove()
 
-def bulk_update_data(table, list_of_data):
+def bulk_insert_data2(table, list_of_data):
 
-    Session = scoped_session(session_factory)    
-    Session.bulk_update_mappings(table, list_of_data)
+    Session = scoped_session(session_factory)
+    print(Session.query(Price).delete())
+    Session.bulk_insert_mappings(table, list_of_data)
     Session.commit()
     Session.remove()
 

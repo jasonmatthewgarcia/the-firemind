@@ -2,7 +2,7 @@ from flask import render_template, flash, redirect, url_for, request
 from flask_login import current_user, login_user, logout_user, login_required
 from app import app
 from app.forms import LoginForm
-from app.models import Admin, Card, CardSet, Price, bulk_insert_data, bulk_update_data, fetch_card
+from app.models import Admin, Card, CardSet, Price, bulk_insert_data, bulk_insert_data2, fetch_card
 from app.services import *
 from app.server import *
 from werkzeug.urls import url_parse
@@ -23,7 +23,7 @@ def update_prices():
     cards = Card()
     list_of_cardIds = cards.getAllCardIdsFromDatabase()
     list_of_prices = getAllPricesByChunk(list_of_cardIds, session)
-    bulk_update_data(Price(), list_of_prices)
+    bulk_insert_data2(Price(), list_of_prices)
 
     return render_template('index.html', title='Home', payload=list_of_prices)
 
