@@ -3,37 +3,45 @@ from app.dataProcessor import splitListOfDataIntoChunks, formatFetchedCardData
 from sqlalchemy.orm import scoped_session
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
-
+from contextlib import contextmanager
 
 @login.user_loader
 def load_user(id):
     
     return Admin.query.get(int(id))
 
+@contextmanager
+def get_db_session():
+    try:
+        Session = scoped_session(session_factory)
+        yield Session
+    except Exception as e:
+        print(e)
+        Session.rollback()
+    finally:
+        Session.remove()
+
 def bulk_insert_data(table, list_of_data):
 
-    Session = scoped_session(session_factory)    
-    Session.bulk_insert_mappings(table, list_of_data)
-    Session.commit()
-    Session.remove()
+    with get_db_session() as Session:
+        Session.bulk_insert_mappings(table, list_of_data)
+        Session.commit()
 
-def bulk_insert_data2(table, list_of_data):
+def replace_entire_table(table, list_of_data):
 
-    Session = scoped_session(session_factory)
-    print(Session.query(Price).delete())
-    Session.bulk_insert_mappings(table, list_of_data)
-    Session.commit()
-    Session.remove()
+    with get_db_session() as Session:
+        Session.query(table).delete()
+        Session.bulk_insert_mappings(table, list_of_data)
+        Session.commit()
+
 
 def fetch_card(name):
 
-    Session = scoped_session(session_factory)
-    results = Session.query(Card).filter((Card.cleanName == name) | (Card.name == name)).limit(10).all()
+    with get_db_session() as Session:
+        results = Session.query(Card).filter((Card.cleanName == name) | (Card.name == name)).limit(10).all()
+        list_of_card_data = formatFetchedCardData(results)
 
-    list_of_card_data = formatFetchedCardData(results)
-    Session.remove()
-
-    return list_of_card_data
+        return list_of_card_data
 
 class Admin(UserMixin, db.Model):
 

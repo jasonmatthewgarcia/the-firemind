@@ -2,7 +2,7 @@ from flask import render_template, flash, redirect, url_for, request
 from flask_login import current_user, login_user, logout_user, login_required
 from app import app
 from app.forms import LoginForm
-from app.models import Admin, Card, CardSet, Price, bulk_insert_data, bulk_insert_data2, fetch_card
+from app.models import Admin, Card, CardSet, Price, bulk_insert_data, replace_entire_table, fetch_card
 from app.services import *
 from app.server import *
 from werkzeug.urls import url_parse
@@ -12,8 +12,7 @@ from werkzeug.urls import url_parse
 @login_required
 def index():
 
-    payload = fetch_card('sol ring')
-    return render_template('index.html', title='Home', payload=payload)
+    return render_template('index.html', title='Home')
 
 @app.route('/update_prices', methods=['GET', 'POST'])
 @login_required
@@ -23,33 +22,25 @@ def update_prices():
     cards = Card()
     list_of_cardIds = cards.getAllCardIdsFromDatabase()
     list_of_prices = getAllPricesByChunk(list_of_cardIds, session)
-    bulk_insert_data2(Price(), list_of_prices)
+    replace_entire_table(Price, list_of_prices)
 
-    return render_template('index.html', title='Home', payload=list_of_prices)
+    return render_template('index.html', title='Home', payload="{} card prices updated".format(len(list_of_prices)))
 
-@app.route('/update_cards', methods=['GET', 'POST'])
+@app.route('/update_all_data', methods=['GET', 'POST'])
 @login_required
-def update_cards():
+def update_all_data():
 
     session = init_session()
-    request_for_cards = "http://api.tcgplayer.com/{}/catalog/products".format(config.TCGPlayer_version)
     default_params = {'categoryId' : 1, 'productTypes' : 'Cards', 'limit' : 100}
-    list_of_cards = getBulkCardData(session, request_for_cards, default_params, 0)
-    bulk_insert_data(Card(), list_of_cards)
+    list_of_cards = getBulkCardData(session, config.TCGPLAYER_CARD_API_URL, default_params)
+    list_of_card_sets = getBulkCardData(session, config.TCGPLAYER_CARD_SET_API_URL, default_params)
 
-    return render_template('index.html', title='Home', payload=list_of_cards)
+    replace_entire_table(Card, list_of_cards)
+    replace_entire_table(CardSet, list_of_card_sets)
 
-@app.route('/update_cardsets', methods=['GET', 'POST'])
-@login_required
-def update_cardsets():
-
-    session = init_session()
-    request_for_cards = "http://api.tcgplayer.com/{}/catalog/groups".format(config.TCGPlayer_version)
-    default_params = {'categoryId' : 1, 'productTypes' : 'Cards', 'limit' : 100}
-    list_of_card_sets = getBulkCardData(session, request_for_cards, default_params, 0)
-    bulk_insert_data(CardSet(), list_of_card_sets)
-
-    return render_template('index.html', title='Home', payload=list_of_card_sets)
+    update_prices()
+    
+    return render_template('index.html', title='Home', payload="{} cards updated".format(len(list_of_cards)))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

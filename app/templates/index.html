@@ -3,4 +3,10 @@
 {% block content %}
     <h1>Hi, {{ current_user.username }}!</h1>
     <div>{{ payload }}</div>
+    <div>
+        <a href="{{ url_for('update_prices') }}">Update Prices</a>
+    </div>
+    <div>
+        <a href="{{ url_for('update_all_data') }}">Update All Card Data</a>
+    </div>
 {% endblock %}

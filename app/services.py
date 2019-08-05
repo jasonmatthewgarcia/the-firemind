@@ -1,4 +1,5 @@
 import config, requests
+from app.models import Card, CardSet, Price, bulk_insert_data, replace_entire_table
 
 def getAllPricesByChunk(chunks_of_cardIds, session):
 
@@ -6,7 +7,7 @@ def getAllPricesByChunk(chunks_of_cardIds, session):
     for chunk in chunks_of_cardIds:
 
         cardIds = ','.join(map(str, chunk))
-        request = "http://api.tcgplayer.com/{}/pricing/product/{}".format(config.TCGPlayer_version, cardIds)
+        request = config.TCGPLAYER_PRICE_API_URL + cardIds
         fetched_prices = _fetchCardDataFromTCGPlayer(session, request)
         list_of_prices += fetched_prices
 
@@ -14,7 +15,7 @@ def getAllPricesByChunk(chunks_of_cardIds, session):
 
     return list_of_prices
 
-def getBulkCardData(session, request, params, offset):
+def getBulkCardData(session, request, params, offset=0):
 
     params['offset'] = offset
     list_of_data = []
@@ -41,7 +42,6 @@ def _fetchCardDataFromTCGPlayer(session, request, optionalParams=None):
         response = session.get(request)
 
     return response.json()['results']
-
 
 def init_session():
 
