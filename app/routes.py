@@ -2,7 +2,8 @@ from flask import render_template, flash, redirect, url_for, request
 from flask_login import current_user, login_user, logout_user, login_required
 from app import app
 from app.forms import LoginForm
-from app.models import Admin, Card, CardSet, Price, bulk_insert_data, replace_entire_table, fetch_card
+from app.models import Admin, Card, CardSet, Price
+from app.databaseUpdater import *
 from app.services import *
 from app.server import *
 from werkzeug.urls import url_parse
@@ -14,33 +15,21 @@ def index():
 
     return render_template('index.html', title='Home')
 
-@app.route('/update_prices', methods=['GET', 'POST'])
+@app.route('/update_prices', methods=['GET'])
 @login_required
 def update_prices():
 
-    session = init_session()
-    cards = Card()
-    list_of_cardIds = cards.getAllCardIdsFromDatabase()
-    list_of_prices = getAllPricesByChunk(list_of_cardIds, session)
-    replace_entire_table(Price, list_of_prices)
+    update_price_table()
 
-    return render_template('index.html', title='Home', payload="{} card prices updated".format(len(list_of_prices)))
+    return render_template('index.html', title='Home', payload="Prices updated")
 
-@app.route('/update_all_data', methods=['GET', 'POST'])
+@app.route('/update_all_data', methods=['GET'])
 @login_required
 def update_all_data():
 
-    session = init_session()
-    default_params = {'categoryId' : 1, 'productTypes' : 'Cards', 'limit' : 100}
-    list_of_cards = getBulkCardData(session, config.TCGPLAYER_CARD_API_URL, default_params)
-    list_of_card_sets = getBulkCardData(session, config.TCGPLAYER_CARD_SET_API_URL, default_params)
+    update_all_tables()
 
-    replace_entire_table(Card, list_of_cards)
-    replace_entire_table(CardSet, list_of_card_sets)
-
-    update_prices()
-    
-    return render_template('index.html', title='Home', payload="{} cards updated".format(len(list_of_cards)))
+    return render_template('index.html', title='Home', payload="Data updated")
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
