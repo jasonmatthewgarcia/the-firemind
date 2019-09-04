@@ -20,7 +20,3 @@ def update_all_tables():
     replace_entire_table(CardSet, list_of_card_sets)
 
     update_price_table()
-
-def test():
-
-    print("TESTING WORKED")
