@@ -5,7 +5,11 @@ import requests
 
 def _get_card_not_found_response(message):
     
-    return "Sorry, but I can't find {}. Please try again.".format(message)
+    return "Sorry, but I can't find '{}'. Please try again.\n\nType 'help' to view instructions".format(message)
+
+def _get_help_message():
+    
+    return "Type in the card you want to see prices on e.g. 'Farseek'.\n\nNo need to type any special characters(-,!')."
 
 def _generate_elements(list_of_card_data):
     
@@ -16,7 +20,7 @@ def _generate_elements(list_of_card_data):
         element = {
             "title": "{} - {}".format(card.get('name'), card.get('set_name')),
             "image_url": card.get('image_url'),
-            "subtitle": "Normal: {}\nFoil: {}".format(card.get('normal_price'), card.get('foil_price')),
+            "subtitle": "Normal: ${}\nFoil: ${}".format(card.get('normal_price'), card.get('foil_price')),
             "default_action": {
                 "type": "web_url",
                 "url": card.get('image_url'),
@@ -61,7 +65,10 @@ def _get_card_if_it_exists(message):
 
 def _get_error_message_template(message):
 
-    return {'text' : _get_card_not_found_response(message)}
+    if message == 'help':
+        return {'text' : _get_help_message()}
+    else:
+        return {'text' : _get_card_not_found_response(message)}
 
 def _get_message_template(card_data):
 
@@ -83,6 +90,7 @@ def verify_webhook(req):
         return 'Incorrect', 400
 
 def respond(sender, message):
+
     card_data = _get_card_if_it_exists(message)
     
     if card_data:
